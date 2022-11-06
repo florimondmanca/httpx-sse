@@ -1,4 +1,5 @@
-from typing import Optional
+import json
+from typing import Any, Optional
 
 
 class ServerSentEvent:
@@ -34,3 +35,6 @@ class ServerSentEvent:
     @property
     def retry(self) -> Optional[int]:
         return self._retry
+
+    def json(self) -> Any:
+        return json.loads(self.data)

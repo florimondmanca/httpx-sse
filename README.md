@@ -54,7 +54,7 @@ from sse_starlette.sse import EventSourceResponse
 async def numbers(minimum, maximum):
     for i in range(minimum, maximum + 1):
         await asyncio.sleep(0.9)
-        yield dict(data=i)
+        yield {"data": i}
 
 async def sse(request):
     generator = numbers(1, 5)
@@ -176,6 +176,10 @@ Represents a server-sent event.
 * `data: str` - Defaults to `""`.
 * `id: str` - Defaults to `""`.
 * `retry: str | None` - Defaults to `None`.
+
+Methods:
+
+* `json() -> Any` - Returns `sse.data` decoded as JSON.
 
 ### `SSEError`
 
