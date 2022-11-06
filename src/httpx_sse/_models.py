@@ -5,9 +5,18 @@ class ServerSentEvent:
     def __init__(
         self, event: str = None, data: str = None, id: str = None, retry: int = None
     ) -> None:
-        self._event = "message" if event is None else event
-        self._data = "" if data is None else data
-        self._id = "" if id is None else id
+        if not event:
+            event = "message"
+
+        if data is None:
+            data = ""
+
+        if id is None:
+            id = ""
+
+        self._event = event
+        self._data = data
+        self._id = id
         self._retry = retry
 
     @property

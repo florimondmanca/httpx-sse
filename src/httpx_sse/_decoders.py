@@ -45,13 +45,13 @@ class _SSEDecoder:
                 return None
 
             sse = ServerSentEvent(
-                event=self._event or "message",
+                event=self._event,
                 data="\n".join(self._data),
                 id=self._last_event_id,
                 retry=self._retry,
             )
 
-            # NOTE: as per the SSE spec, do not reset last_event_id does not get reset.
+            # NOTE: as per the SSE spec, do not reset last_event_id.
             self._event = ""
             self._data = []
             self._retry = None
