@@ -2,13 +2,13 @@
 
 # Tooling and tests.
 autoflake
-black==22.3.*
-flake8==4.*
-httpx==0.22.*
+black==22.10.*
+flake8==5.*
+httpx==0.23.*
 isort==5.*
-mypy==0.950
+mypy==0.982
 pytest==7.*
-pytest-asyncio==0.18.*
+pytest-asyncio==0.20.*
 pytest-cov
 
 # Releasing.
