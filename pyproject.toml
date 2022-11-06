@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "httpx-sse"
+description = "Consume Server-Sent Event (SSE) messages with HTTPX."
+requires-python = ">=3.7"
+license = { text = "MIT" }
+authors = [
+  { name = "Florimond Manca", email = "florimond.manca@protonmail.com" },
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+]
+dependencies = []
+dynamic = ["version", "readme"]
+
+[project.urls]
+"Homepage" = "https://github.com/florimondmanca/httpx-sse"
+
+[tool.setuptools.dynamic]
+version = { attr = "httpx_sse.__version__" }
+readme = { file = ["README.md", "CHANGELOG.md"], content-type = "text/markdown" }

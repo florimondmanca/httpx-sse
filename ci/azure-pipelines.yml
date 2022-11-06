@@ -1,0 +1,43 @@
+resources:
+  repositories:
+    - repository: templates
+      type: github
+      endpoint: github
+      name: florimondmanca/azure-pipelines-templates
+      ref: refs/tags/6.0
+
+trigger:
+  - master
+  - refs/tags/*
+
+pr:
+  - master
+
+variables:
+  - name: CI
+    value: "true"
+  - name: PIP_CACHE_DIR
+    value: $(Pipeline.Workspace)/.cache/pip
+  - group: pypi-credentials
+
+stages:
+  - stage: test
+    jobs:
+      - template: job--python-check.yml@templates
+        parameters:
+          pythonVersion: "3.11"
+
+      - template: job--python-test.yml@templates
+        parameters:
+          jobs:
+            py38:
+            py311:
+              coverage: true
+
+  - stage: publish
+    condition: startsWith(variables['Build.SourceBranch'], 'refs/tags/')
+    jobs:
+      - template: job--python-publish.yml@templates
+        parameters:
+          pythonVersion: "3.10"
+          token: $(pypiToken)
