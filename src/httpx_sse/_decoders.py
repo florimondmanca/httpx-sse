@@ -1,29 +1,9 @@
-from typing import AsyncIterator, Iterator, List, Optional
-
-import httpx
+from typing import List, Optional
 
 from ._models import ServerSentEvent
 
 
-def iter_sse(response: httpx.Response) -> Iterator[ServerSentEvent]:
-    decoder = _SSEDecoder()
-
-    for line in response.iter_lines():
-        sse = decoder.decode(line)
-        if sse is not None:
-            yield sse
-
-
-async def aiter_sse(response: httpx.Response) -> AsyncIterator[ServerSentEvent]:
-    decoder = _SSEDecoder()
-
-    async for line in response.aiter_lines():
-        sse = decoder.decode(line)
-        if sse is not None:
-            yield sse
-
-
-class _SSEDecoder:
+class SSEDecoder:
     def __init__(self) -> None:
         self._event = ""
         self._data: List[str] = []

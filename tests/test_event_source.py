@@ -1,8 +1,9 @@
-from typing import Iterator
+from typing import AsyncIterator, Iterator
 
 import httpx
+import pytest
 
-from httpx_sse import iter_sse
+from httpx_sse import EventSource
 
 # NOTE: the 'whatwg_example*' test cases are inspired by:
 # https://html.spec.whatwg.org/multipage/server-sent-events.html#event-stream-interpretation  # noqa: E501
@@ -22,7 +23,7 @@ def test_iter_sse_whatwg_example1() -> None:
         stream=Body(),
     )
 
-    events = list(iter_sse(response))
+    events = list(EventSource(response).iter_sse())
     assert len(events) == 1
 
     assert events[0].event == "message"
@@ -51,7 +52,7 @@ def test_iter_sse_whatwg_example2() -> None:
         stream=Body(),
     )
 
-    events = list(iter_sse(response))
+    events = list(EventSource(response).iter_sse())
     assert len(events) == 3
 
     assert events[0].event == "message"
@@ -86,7 +87,7 @@ def test_iter_sse_whatwg_example3() -> None:
         stream=Body(),
     )
 
-    events = list(iter_sse(response))
+    events = list(EventSource(response).iter_sse())
     assert len(events) == 2
 
     assert events[0].event == "message"
@@ -114,7 +115,7 @@ def test_iter_sse_whatwg_example4() -> None:
         stream=Body(),
     )
 
-    events = list(iter_sse(response))
+    events = list(EventSource(response).iter_sse())
     assert len(events) == 2
 
     assert events[0].event == "message"
@@ -141,7 +142,7 @@ def test_iter_sse_event() -> None:
         stream=Body(),
     )
 
-    events = list(iter_sse(response))
+    events = list(EventSource(response).iter_sse())
     assert len(events) == 1
 
     assert events[0].event == "logline"
@@ -163,7 +164,7 @@ def test_iter_sse_id_null() -> None:
         stream=Body(),
     )
 
-    events = list(iter_sse(response))
+    events = list(EventSource(response).iter_sse())
     assert len(events) == 1
 
     assert events[0].event == "message"
@@ -184,7 +185,7 @@ def test_iter_sse_id_retry() -> None:
         stream=Body(),
     )
 
-    events = list(iter_sse(response))
+    events = list(EventSource(response).iter_sse())
     assert len(events) == 1
 
     assert events[0].event == "message"
@@ -205,7 +206,7 @@ def test_iter_sse_id_retry_invalid() -> None:
         stream=Body(),
     )
 
-    events = list(iter_sse(response))
+    events = list(EventSource(response).iter_sse())
     assert len(events) == 0
 
 
@@ -221,5 +222,29 @@ def test_iter_sse_unknown_field() -> None:
         stream=Body(),
     )
 
-    events = list(iter_sse(response))
+    events = list(EventSource(response).iter_sse())
     assert len(events) == 0
+
+
+@pytest.mark.asyncio
+async def test_aiter_sse() -> None:
+    class AsyncBody(httpx.AsyncByteStream):
+        async def __aiter__(self) -> AsyncIterator[bytes]:
+            yield b"data: YH00\n"
+            yield b"data: +2\n"
+            yield b"data: 10\n"
+            yield b"\n"
+
+    response = httpx.Response(
+        200,
+        headers={"content-type": "text/event-stream"},
+        stream=AsyncBody(),
+    )
+
+    events = [sse async for sse in EventSource(response).aiter_sse()]
+    assert len(events) == 1
+
+    assert events[0].event == "message"
+    assert events[0].data == "YH00\n+2\n10"
+    assert events[0].id == ""
+    assert events[0].retry is None

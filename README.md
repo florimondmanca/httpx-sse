@@ -24,20 +24,17 @@ pip install git+https://github.com/florimondmanca/httpx-sse.git
 
 ## Quickstart
 
-To consume Server-Sent Event streams with `httpx-sse`, you must do two things:
-
-1. Make your HTTPX client use [`SSETransport`](#ssetransport) (or [`AsyncSSETransport`](#asyncssetransport)).
-2. Consume events with [`iter_sse`](#iter_sse) (or [`aiter_sse`](#aiter_sse)).
+`httpx-sse` provides the [`connect_sse`](#connect_sse) and [`aconnect_sse`](#aconnect_sse) helpers for connecting to an SSE endpoint. The resulting [`EventSource`](#eventsource) object exposes the [`.iter_sse()`](#iter_sse) and [`.aiter_sse()`](#aiter_sse) methods to iterate over the server-sent events.
 
 Example usage:
 
 ```python
 import httpx
-from httpx_sse import SSETransport, iter_sse
+from httpx_sse import connect_sse
 
-with httpx.Client(transport=SSETransport()) as client:
-    with httpx.stream("GET", "http://localhost:8000/sse") as response:
-        for sse in iter_sse(response):
+with httpx.Client() as client:
+    with connect_sse(client, "http://localhost:8000/sse") as event_source:
+        for sse in event_source.iter_sse():
             print(sse.event, sse.data, sse.id, sse.retry)
 ```
 
@@ -72,6 +69,45 @@ if __name__ == "__main__":
 
 ## How-To
 
+### Calling into Python web apps
+
+You can [call into Python web apps](https://www.python-httpx.org/async/#calling-into-python-web-apps) with HTTPX and `httpx-sse` to test SSE endpoints directly.
+
+Here's an example of calling into a Starlette ASGI app...
+
+```python
+import asyncio
+
+import httpx
+from httpx_sse import aconnect_sse
+from sse_starlette.sse import EventSourceResponse
+from starlette.applications import Starlette
+from starlette.routing import Route
+
+async def auth_events(request):
+    async def events():
+        yield {
+            "event": "login",
+            "data": '{"user_id": "4135"}',
+        }
+
+    return EventSourceResponse(events())
+
+app = Starlette(routes=[Route("/sse/auth/", endpoint=auth_events)])
+
+async def main():
+    async with httpx.AsyncClient(app=app) as client:
+        async with aconnect_sse(
+            client, "http://localhost:8000/sse/auth/"
+        ) as event_source:
+            events = [sse async for sse in event_source.aiter_sse()]
+            (sse,) = events
+            assert sse.event == "login"
+            assert sse.json() == {"user_id": "4135"}
+
+asyncio.run(main())
+```
+
 ### Handling reconnections
 
 _(Advanced)_
@@ -97,15 +133,18 @@ def iter_sse_retrying(client, url):
     # `stamina` will apply jitter and exponential backoff on top of
     # the `retry` reconnection delay sent by the server.
     @retry(on=httpx.ReadError)
-    def _fetch_events():
+    def _iter_sse():
         nonlocal last_event_id, reconnection_delay
 
         time.sleep(reconnection_delay)
 
-        headers = {"Last-Event-ID": last_event_id} if last_event_id else {}
+        headers = {"Accept": "text/event-stream"}
 
-        with client.stream("GET", url, headers=headers) as response:
-            for sse in iter_sse(response):
+        if last_event_id:
+            headers["Last-Event-ID"] = last_event_id
+
+        with connect_sse(client, url, headers=headers) as event_source:
+            for sse in event_source.iter_sse():
                 last_event_id = sse.id
 
                 if sse.retry is not None:
@@ -113,60 +152,81 @@ def iter_sse_retrying(client, url):
 
                 yield sse
 
-    return _fetch_events()
+    return _iter_sse()
 ```
 
 Usage:
 
 ```python
-with httpx.Client(transport=SSETransport()) as client:
-    for sse in iter_sse_retrying(client, "http://localhost:8000/sse"):
+with httpx.Client() as client:
+    for iter_sse_retrying(client, "http://localhost:8000/sse") as sse:
         print(sse.event, sse.data)
 ```
 
 ## API Reference
 
-### `SSETransport`
+### `connect_sse`
 
 ```python
-__init__(parent: httpx.BaseTransport=None)
+def connect_sse(
+    client: httpx.Client,
+    url: Union[str, httpx.URL],
+    **kwargs,
+) -> ContextManager[EventSource]
 ```
 
-An HTTPX [transport](https://www.python-httpx.org/advanced/#custom-transports) for SSE requests.
+Connect to an SSE endpoint and return an [`EventSource`](#eventsource) context manager.
 
-This transport sets `Cache-Control: no-store` on the request, as per the SSE spec.
+This sets `Cache-Control: no-store` on the request, as per the SSE spec, as well as `Accept: text/event-stream`.
 
-If the response `Content-Type` is not `text/event-stream`, the transport will raise an [`SSEError`](#sseerror).
+If the response `Content-Type` is not `text/event-stream`, this will raise an [`SSEError`](#sseerror).
 
-### `AsyncSSETransport`
+### `aconnect_sse`
 
 ```python
-__init__(parent: httpx.AsyncBaseTransport=None)
+async def aconnect_sse(
+    client: httpx.AsyncClient,
+    url: Union[str, httpx.URL],
+    **kwargs,
+) -> AsyncContextManager[EventSource]
 ```
 
-An async equivalent to `SSETransport`, for use with `httpx.AsyncClient`.
+An async equivalent to [`connect_sse`](#connect_sse).
 
-### `iter_sse`
-
-`(response: httpx.Response) -> Iterator[ServerSentEvent]`
-
-Consume response content as server-sent events.
+### `EventSource`
 
 ```python
-for sse in iter_sse(response):
+def __init__(response: httpx.Response)
+```
+
+Helper for working with an SSE response.
+
+#### `response`
+
+The underlying [`httpx.Response`](https://www.python-httpx.org/api/#response).
+
+#### `iter_sse`
+
+```python
+def iter_sse() -> Iterator[ServerSentEvent]
+```
+
+Decode the response content and yield corresponding [`ServerSentEvent`](#serversentevent).
+
+Example usage:
+
+```python
+for sse in event_source.iter_sse():
     ...
 ```
 
-### `aiter_sse`
-
-`(response: httpx.Response) -> AsyncIterator[ServerSentEvent]`
-
-Consume async response content as server-sent events.
+#### `aiter_sse`
 
 ```python
-async for sse in aiter_sse(response):
-    ...
+async def iter_sse() -> AsyncIterator[ServerSentEvent]
 ```
+
+An async equivalent to `iter_sse`.
 
 ### `ServerSentEvent`
 
