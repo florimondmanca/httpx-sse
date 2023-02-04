@@ -37,7 +37,7 @@ def test_connect_sse_non_event_stream_received() -> None:
 
 @pytest.mark.asyncio
 async def test_aconnect_sse() -> None:
-    async def handler(request: httpx.Request) -> httpx.Response:
+    def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/":
             return httpx.Response(200, text="Hello, world!")
         else:

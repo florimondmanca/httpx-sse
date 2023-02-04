@@ -13,8 +13,6 @@ class SSEDecoder:
     def decode(self, line: str) -> Optional[ServerSentEvent]:
         # See: https://html.spec.whatwg.org/multipage/server-sent-events.html#event-stream-interpretation  # noqa: E501
 
-        line = line[:-1]  # Drop trailing '\n'
-
         if not line:
             if (
                 not self._event

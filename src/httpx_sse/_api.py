@@ -27,6 +27,7 @@ class EventSource:
     def iter_sse(self) -> Iterator[ServerSentEvent]:
         decoder = SSEDecoder()
         for line in self._response.iter_lines():
+            line = line.rstrip("\n")
             sse = decoder.decode(line)
             if sse is not None:
                 yield sse
@@ -34,6 +35,7 @@ class EventSource:
     async def aiter_sse(self) -> AsyncIterator[ServerSentEvent]:
         decoder = SSEDecoder()
         async for line in self._response.aiter_lines():
+            line = line.rstrip("\n")
             sse = decoder.decode(line)
             if sse is not None:
                 yield sse
