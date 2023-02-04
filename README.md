@@ -18,8 +18,7 @@ Consume [Server-Sent Event (SSE)](https://html.spec.whatwg.org/multipage/server-
 **NOTE**: This is alpha software. Please be sure to pin your dependencies.
 
 ```bash
-# --Unreleased--
-pip install git+https://github.com/florimondmanca/httpx-sse.git
+pip install httpx-sse=="0.1.*"
 ```
 
 ## Quickstart
