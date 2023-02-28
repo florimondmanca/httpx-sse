@@ -42,18 +42,19 @@ class EventSource:
 
 
 @contextmanager
-def connect_sse(client: httpx.Client, url: str, **kwargs: Any) -> Iterator[EventSource]:
+def connect_sse(client: httpx.Client, method: str, url: str, **kwargs: Any) -> Iterator[EventSource]:
     headers = kwargs.pop("headers", {})
     headers["Accept"] = "text/event-stream"
     headers["Cache-Control"] = "no-store"
 
-    with client.stream("GET", url, headers=headers, **kwargs) as response:
+    with client.stream(method, url, headers=headers, **kwargs) as response:
         yield EventSource(response)
 
 
 @asynccontextmanager
 async def aconnect_sse(
     client: httpx.AsyncClient,
+    method: str,
     url: str,
     **kwargs: Any,
 ) -> AsyncIterator[EventSource]:
@@ -61,5 +62,5 @@ async def aconnect_sse(
     headers["Accept"] = "text/event-stream"
     headers["Cache-Control"] = "no-store"
 
-    async with client.stream("GET", url, headers=headers, **kwargs) as response:
+    async with client.stream(method, url, headers=headers, **kwargs) as response:
         yield EventSource(response)

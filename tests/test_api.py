@@ -20,7 +20,7 @@ def test_connect_sse() -> None:
         assert response.status_code == 200
         assert response.headers["content-type"] == "text/plain; charset=utf-8"
 
-        with connect_sse(client, "http+sse://testserver/sse") as event_source:
+        with connect_sse(client, "GET", "http+sse://testserver/sse") as event_source:
             assert event_source.response.request.headers["cache-control"] == "no-store"
 
 
@@ -31,7 +31,7 @@ def test_connect_sse_non_event_stream_received() -> None:
 
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
         with pytest.raises(SSEError, match="text/event-stream"):
-            with connect_sse(client, "http://testserver") as _:
+            with connect_sse(client, "GET", "http://testserver") as _:
                 pass  # pragma: no cover
 
 
@@ -52,5 +52,5 @@ async def test_aconnect_sse() -> None:
         assert response.status_code == 200
         assert response.headers["content-type"] == "text/plain; charset=utf-8"
 
-        async with aconnect_sse(client, "http+sse://testserver/sse") as event_source:
+        async with aconnect_sse(client, "GET", "http+sse://testserver/sse") as event_source:
             assert event_source.response.request.headers["cache-control"] == "no-store"
