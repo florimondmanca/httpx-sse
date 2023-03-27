@@ -122,7 +122,7 @@ import time
 from typing import Iterator
 
 import httpx
-from httpx_sse import iter_sse, ServerSentEvent
+from httpx_sse import connect_sse, ServerSentEvent
 from stamina import retry
 
 def iter_sse_retrying(client, method, url):
@@ -158,7 +158,7 @@ Usage:
 
 ```python
 with httpx.Client() as client:
-    for iter_sse_retrying(client, "GET", "http://localhost:8000/sse") as sse:
+    for sse in iter_sse_retrying(client, "GET", "http://localhost:8000/sse"):
         print(sse.event, sse.data)
 ```
 
