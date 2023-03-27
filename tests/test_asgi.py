@@ -35,7 +35,9 @@ async def client(app: ASGIApp) -> AsyncIterator[httpx.AsyncClient]:
 
 @pytest.mark.asyncio
 async def test_asgi_test(client: httpx.AsyncClient) -> None:
-    async with aconnect_sse(client, "GET", "http://testserver/sse/auth/") as event_source:
+    async with aconnect_sse(
+        client, "GET", "http://testserver/sse/auth/"
+    ) as event_source:
         events = [sse async for sse in event_source.aiter_sse()]
         (sse,) = events
         assert sse.event == "login"
