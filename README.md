@@ -32,7 +32,7 @@ import httpx
 from httpx_sse import connect_sse
 
 with httpx.Client() as client:
-    with connect_sse(client, "http://localhost:8000/sse") as event_source:
+    with connect_sse(client, "GET", "http://localhost:8000/sse") as event_source:
         for sse in event_source.iter_sse():
             print(sse.event, sse.data, sse.id, sse.retry)
 ```
@@ -97,7 +97,7 @@ app = Starlette(routes=[Route("/sse/auth/", endpoint=auth_events)])
 async def main():
     async with httpx.AsyncClient(app=app) as client:
         async with aconnect_sse(
-            client, "http://localhost:8000/sse/auth/"
+            client, "GET", "http://localhost:8000/sse/auth/"
         ) as event_source:
             events = [sse async for sse in event_source.aiter_sse()]
             (sse,) = events
@@ -125,7 +125,7 @@ import httpx
 from httpx_sse import iter_sse, ServerSentEvent
 from stamina import retry
 
-def iter_sse_retrying(client, url):
+def iter_sse_retrying(client, method, url):
     last_event_id = ""
     reconnection_delay = 0.0
 
@@ -142,7 +142,7 @@ def iter_sse_retrying(client, url):
         if last_event_id:
             headers["Last-Event-ID"] = last_event_id
 
-        with connect_sse(client, url, headers=headers) as event_source:
+        with connect_sse(client, method, url, headers=headers) as event_source:
             for sse in event_source.iter_sse():
                 last_event_id = sse.id
 
@@ -158,7 +158,7 @@ Usage:
 
 ```python
 with httpx.Client() as client:
-    for iter_sse_retrying(client, "http://localhost:8000/sse") as sse:
+    for iter_sse_retrying(client, "GET", "http://localhost:8000/sse") as sse:
         print(sse.event, sse.data)
 ```
 
@@ -169,6 +169,7 @@ with httpx.Client() as client:
 ```python
 def connect_sse(
     client: httpx.Client,
+    method: str,
     url: Union[str, httpx.URL],
     **kwargs,
 ) -> ContextManager[EventSource]
@@ -185,6 +186,7 @@ If the response `Content-Type` is not `text/event-stream`, this will raise an [`
 ```python
 async def aconnect_sse(
     client: httpx.AsyncClient,
+    method: str,
     url: Union[str, httpx.URL],
     **kwargs,
 ) -> AsyncContextManager[EventSource]
