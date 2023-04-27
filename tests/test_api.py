@@ -31,8 +31,9 @@ def test_connect_sse_non_event_stream_received() -> None:
 
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
         with pytest.raises(SSEError, match="text/event-stream"):
-            with connect_sse(client, "GET", "http://testserver") as _:
-                pass  # pragma: no cover
+            with connect_sse(client, "GET", "http://testserver") as event_source:
+                for _ in event_source.iter_sse():
+                    pass  # pragma: no cover
 
 
 @pytest.mark.asyncio
