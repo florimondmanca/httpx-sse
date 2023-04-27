@@ -23,7 +23,7 @@ class EventSource:
     @property
     def response(self) -> httpx.Response:
         return self._response
-            
+
     def iter_sse(self) -> Iterator[ServerSentEvent]:
         self._check_content_type()
         decoder = SSEDecoder()
