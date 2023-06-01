@@ -4,7 +4,11 @@ from typing import Any, Optional
 
 class ServerSentEvent:
     def __init__(
-        self, event: str = None, data: str = None, id: str = None, retry: int = None
+        self,
+        event: Optional[str] = None,
+        data: Optional[str] = None,
+        id: Optional[str] = None,
+        retry: Optional[int] = None,
     ) -> None:
         if not event:
             event = "message"

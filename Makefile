@@ -12,13 +12,11 @@ install-python:
 
 check:
 	${bin}black --check --diff ${pysources}
-	${bin}flake8 ${pysources}
+	${bin}ruff check ${pysources}
 	${bin}mypy ${pysources}
-	${bin}isort --check --diff ${pysources}
 
 format:
-	${bin}autoflake --in-place --recursive ${pysources}
-	${bin}isort ${pysources}
+	${bin}ruff check --fix ${pysources}
 	${bin}black ${pysources}
 
 build:
