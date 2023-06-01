@@ -38,3 +38,13 @@ class ServerSentEvent:
 
     def json(self) -> Any:
         return json.loads(self.data)
+
+    def __repr__(self) -> str:
+        pieces = [f"event={self.event!r}"]
+        if self.data != "":
+            pieces.append(f"data={self.data!r}")
+        if self.id != "":
+            pieces.append(f"id={self.id!r}")
+        if self.retry is not None:
+            pieces.append(f"retry={self.retry!r}")
+        return f"ServerSentEvent({', '.join(pieces)})"

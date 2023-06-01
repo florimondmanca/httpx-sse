@@ -25,3 +25,11 @@ def test_sse_json() -> None:
 
     sse = ServerSentEvent(data='["item1", "item2"]')
     assert sse.json() == ["item1", "item2"]
+
+
+def test_sse_repr() -> None:
+    sse = ServerSentEvent()
+    assert repr(sse) == "ServerSentEvent(event='message')"
+
+    sse = ServerSentEvent(data="data", retry=3, id="id", event="event")
+    assert repr(sse) == "ServerSentEvent(event='event', data='data', id='id', retry=3)"
