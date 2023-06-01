@@ -30,3 +30,8 @@ dynamic = ["version", "readme"]
 [tool.setuptools.dynamic]
 version = { attr = "httpx_sse.__version__" }
 readme = { file = ["README.md", "CHANGELOG.md"], content-type = "text/markdown" }
+
+[tool.ruff]
+select = ["E", "F", "I"]
+line-length = 88
+src = ["src"]
