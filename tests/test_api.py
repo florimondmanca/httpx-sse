@@ -4,7 +4,16 @@ import pytest
 from httpx_sse import SSEError, aconnect_sse, connect_sse
 
 
-def test_connect_sse() -> None:
+@pytest.mark.parametrize(
+    "content_type",
+    [
+        pytest.param("text/event-stream", id="exact"),
+        pytest.param(
+            "application/json, text/event-stream; charset=utf-8", id="contains"
+        ),
+    ],
+)
+def test_connect_sse(content_type: str) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/":
             return httpx.Response(200, text="Hello, world!")
@@ -12,7 +21,7 @@ def test_connect_sse() -> None:
             assert request.url.path == "/sse"
             text = "data: test\n\n"
             return httpx.Response(
-                200, headers={"content-type": "text/event-stream"}, text=text
+                200, headers={"content-type": content_type}, text=text
             )
 
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
