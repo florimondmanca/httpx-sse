@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## 0.4.0 - 2023-12-22
+
+### Removed
+
+* Dropped Python 3.7 support, as it has reached EOL. (Pull #21)
+
+### Added
+
+* Add official support for Python 3.12. (Pull #21)
+
+### Fixed
+
+* Allow `Content-Type` that contain but are not strictly `text/event-stream`. (Pull #22 by @dbuades)
+* Improve error message when `Content-Type` is missing. (Pull #20 by @jamesbraza)
+
 ## 0.3.1 - 2023-06-01
 
 ### Added
