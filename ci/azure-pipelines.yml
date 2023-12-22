@@ -4,7 +4,7 @@ resources:
       type: github
       endpoint: github
       name: florimondmanca/azure-pipelines-templates
-      ref: refs/tags/6.0
+      ref: refs/tags/6.2
 
 trigger:
   - master
@@ -25,13 +25,13 @@ stages:
     jobs:
       - template: job--python-check.yml@templates
         parameters:
-          pythonVersion: "3.11"
+          pythonVersion: "3.12"
 
       - template: job--python-test.yml@templates
         parameters:
           jobs:
             py38:
-            py311:
+            py312:
               coverage: true
 
   - stage: publish
@@ -39,5 +39,5 @@ stages:
     jobs:
       - template: job--python-publish.yml@templates
         parameters:
-          pythonVersion: "3.11"
+          pythonVersion: "3.12"
           token: $(pypiToken)
