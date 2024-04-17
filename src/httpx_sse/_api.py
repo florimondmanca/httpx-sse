@@ -25,6 +25,7 @@ class EventSource:
         return self._response
 
     def iter_sse(self) -> Iterator[ServerSentEvent]:
+        self._response.raise_for_status()
         self._check_content_type()
         decoder = SSEDecoder()
         for line in self._response.iter_lines():
@@ -34,6 +35,7 @@ class EventSource:
                 yield sse
 
     async def aiter_sse(self) -> AsyncIterator[ServerSentEvent]:
+        self._response.raise_for_status()
         self._check_content_type()
         decoder = SSEDecoder()
         async for line in self._response.aiter_lines():
