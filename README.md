@@ -206,6 +206,16 @@ Helper for working with an SSE response.
 
 The underlying [`httpx.Response`](https://www.python-httpx.org/api/#response).
 
+You may use this to perform more operations and checks on the response, such as checking for HTTP status errors:
+
+```python
+with connect_sse(...) as event_source:
+    event_source.response.raise_for_status()
+
+    for sse in event_source.iter_sse():
+        ...
+```
+
 #### `iter_sse`
 
 ```python
