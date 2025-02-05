@@ -95,7 +95,7 @@ async def auth_events(request):
 app = Starlette(routes=[Route("/sse/auth/", endpoint=auth_events)])
 
 async def main():
-    async with httpx.AsyncClient(app=app) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app)) as client:
         async with aconnect_sse(
             client, "GET", "http://localhost:8000/sse/auth/"
         ) as event_source:
