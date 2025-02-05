@@ -1,4 +1,4 @@
-from typing import AsyncIterator
+from typing import AsyncIterator, cast
 
 import httpx
 import pytest
@@ -29,7 +29,7 @@ def app() -> ASGIApp:
 
 @pytest_asyncio.fixture
 async def client(app: ASGIApp) -> AsyncIterator[httpx.AsyncClient]:
-    async with httpx.AsyncClient(transport=httpx.ASGITransport(app)) as client:
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app)) as client: # type: ignore[arg-type]
         yield client
 
 
