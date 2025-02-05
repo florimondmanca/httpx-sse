@@ -1,4 +1,4 @@
-from typing import AsyncIterator, cast
+from typing import AsyncIterator
 
 import httpx
 import pytest
