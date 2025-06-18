@@ -34,7 +34,7 @@ class EventSource:
             if sse is not None:
                 yield sse
 
-    async def aiter_sse(self) -> AsyncGenerator[ServerSentEvent]:
+    async def aiter_sse(self) -> AsyncGenerator[ServerSentEvent, None]:
         self._check_content_type()
         decoder = SSEDecoder()
         lines = self._response.aiter_lines()
