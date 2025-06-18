@@ -1,3 +1,4 @@
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, contextmanager
 from typing import Any, AsyncIterator, Iterator
 
@@ -33,14 +34,18 @@ class EventSource:
             if sse is not None:
                 yield sse
 
-    async def aiter_sse(self) -> AsyncIterator[ServerSentEvent]:
+    async def aiter_sse(self) -> AsyncGenerator[ServerSentEvent]:
         self._check_content_type()
         decoder = SSEDecoder()
-        async for line in self._response.aiter_lines():
-            line = line.rstrip("\n")
-            sse = decoder.decode(line)
-            if sse is not None:
-                yield sse
+        lines = self._response.aiter_lines()
+        try:
+            async for line in lines:
+                line = line.rstrip("\n")
+                sse = decoder.decode(line)
+                if sse is not None:
+                    yield sse
+        finally:
+            await lines.aclose()
 
 
 @contextmanager
