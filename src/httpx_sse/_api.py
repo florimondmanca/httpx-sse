@@ -1,6 +1,6 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, contextmanager
-from typing import Any, AsyncIterator, Iterator
+from typing import Any, AsyncIterator, Iterator, cast
 
 import httpx
 
@@ -37,7 +37,7 @@ class EventSource:
     async def aiter_sse(self) -> AsyncGenerator[ServerSentEvent, None]:
         self._check_content_type()
         decoder = SSEDecoder()
-        lines = self._response.aiter_lines()
+        lines = cast(AsyncGenerator[str, None], self._response.aiter_lines())
         try:
             async for line in lines:
                 line = line.rstrip("\n")
