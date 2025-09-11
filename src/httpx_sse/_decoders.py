@@ -14,20 +14,14 @@ class SSEDecoder:
         # See: https://html.spec.whatwg.org/multipage/server-sent-events.html#event-stream-interpretation  # noqa: E501
 
         if not line:
-            if (
-                not self._event
-                and not self._data
-                and not self._last_event_id
-                and self._retry is None
-            ):
-                return None
-
-            sse = ServerSentEvent(
-                event=self._event,
-                data="\n".join(self._data),
-                id=self._last_event_id,
-                retry=self._retry,
-            )
+            sse: Optional[ServerSentEvent] = None
+            if self._data:
+                sse = ServerSentEvent(
+                    event=self._event,
+                    data="\n".join(self._data),
+                    id=self._last_event_id,
+                    retry=self._retry,
+                )
 
             # NOTE: as per the SSE spec, do not reset last_event_id.
             self._event = ""
