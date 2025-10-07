@@ -226,6 +226,38 @@ def test_iter_sse_unknown_field() -> None:
     assert len(events) == 0
 
 
+def test_unicode_line_separator_not_parsed_as_newline() -> None:
+    """Test that Unicode line separator (U+2028) is not parsed as a newline.
+
+    The SSE spec only allows CR, LF, or CRLF as line separators.
+    Other Unicode newline characters should be preserved in the data.
+
+    See: https://github.com/florimondmanca/httpx-sse/issues/34
+    """
+
+    class Body(httpx.SyncByteStream):
+        def __iter__(self) -> Iterator[bytes]:
+            # U+2028 is LINE SEPARATOR in UTF-8 encoding: \xe2\x80\xa8
+            yield b"event: message\n"
+            yield b'data: {"text":"Hello\xe2\x80\xa8World"}\n'
+            yield b"\n"
+
+    response = httpx.Response(
+        200,
+        headers={"content-type": "text/event-stream"},
+        stream=Body(),
+    )
+
+    events = list(EventSource(response).iter_sse())
+    assert len(events) == 1
+
+    assert events[0].event == "message"
+    # The line separator should be preserved in the data, not treated as a line break
+    assert events[0].data == '{"text":"Hello\u2028World"}'
+    assert events[0].id == ""
+    assert events[0].retry is None
+
+
 @pytest.mark.asyncio
 async def test_aiter_sse() -> None:
     class AsyncBody(httpx.AsyncByteStream):

@@ -4,7 +4,7 @@ from typing import Any, AsyncIterator, Iterator, cast
 
 import httpx
 
-from ._decoders import SSEDecoder
+from ._decoders import SSEDecoder, SSELineDecoder
 from ._exceptions import SSEError
 from ._models import ServerSentEvent
 
@@ -28,7 +28,7 @@ class EventSource:
     def iter_sse(self) -> Iterator[ServerSentEvent]:
         self._check_content_type()
         decoder = SSEDecoder()
-        for line in self._response.iter_lines():
+        for line in _iter_sse_lines(self._response):
             line = line.rstrip("\n")
             sse = decoder.decode(line)
             if sse is not None:
@@ -37,7 +37,7 @@ class EventSource:
     async def aiter_sse(self) -> AsyncGenerator[ServerSentEvent, None]:
         self._check_content_type()
         decoder = SSEDecoder()
-        lines = cast(AsyncGenerator[str, None], self._response.aiter_lines())
+        lines = cast(AsyncGenerator[str, None], _aiter_sse_lines(self._response))
         try:
             async for line in lines:
                 line = line.rstrip("\n")
@@ -73,3 +73,21 @@ async def aconnect_sse(
 
     async with client.stream(method, url, headers=headers, **kwargs) as response:
         yield EventSource(response)
+
+
+async def _aiter_sse_lines(response: httpx.Response) -> AsyncIterator[str]:
+    decoder = SSELineDecoder()
+    async for text in response.aiter_text():
+        for line in decoder.decode(text):
+            yield line
+    for line in decoder.flush():
+        yield line
+
+
+def _iter_sse_lines(response: httpx.Response) -> Iterator[str]:
+    decoder = SSELineDecoder()
+    for text in response.iter_text():
+        for line in decoder.decode(text):
+            yield line
+    for line in decoder.flush():
+        yield line
