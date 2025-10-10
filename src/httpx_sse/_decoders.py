@@ -4,28 +4,18 @@ from ._models import ServerSentEvent
 
 
 def _splitlines_sse(text: str) -> List[str]:
-    """Split text on \\r\\n, \\r, or \\n only."""
-    lines = []
-    start = 0
-    i = 0
+    """Split text on \r\n, \r, or \n only."""
+    if not text:
+        return []
 
-    while i < len(text):
-        # Check for \r\n first (2 chars)
-        if i < len(text) - 1 and text[i : i + 2] == "\r\n":
-            lines.append(text[start:i])
-            start = i + 2
-            i += 2
-        # Then check for \r or \n (1 char each)
-        elif text[i] in "\r\n":
-            lines.append(text[start:i])
-            start = i + 1
-            i += 1
-        else:
-            i += 1
+    if "\r" not in text:
+        lines = text.split("\n")
+    else:
+        normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+        lines = normalized.split("\n")
 
-    # Add remaining text if any
-    if start < len(text):
-        lines.append(text[start:])
+    if text[-1] in "\r\n":
+        lines.pop()
 
     return lines
 
