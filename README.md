@@ -37,7 +37,7 @@ with httpx.Client() as client:
             print(sse.event, sse.data, sse.id, sse.retry)
 ```
 
-You can try this against this example Starlette server ([credit](https://sysid.github.io/sse/)):
+You can try this against this example Starlette server ([credit](https://sysid.github.io/server-sent-events/)):
 
 ```python
 # Requirements: pip install uvicorn starlette sse-starlette
