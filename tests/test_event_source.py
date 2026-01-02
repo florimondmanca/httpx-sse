@@ -173,9 +173,42 @@ def test_iter_sse_id_null() -> None:
     assert events[0].retry is None
 
 
-def test_iter_sse_id_retry() -> None:
+def test_iter_sse_id_with_comment() -> None:
     class Body(httpx.SyncByteStream):
         def __iter__(self) -> Iterator[bytes]:
+            yield b"data: test\n"
+            yield b"id: 123\n"
+            yield b"\n"
+            yield b": comment\n"
+            yield b"\n"
+            yield b"id: 456\n"
+            yield b"data: test2\n"
+            yield b"\n"
+
+    response = httpx.Response(
+        200,
+        headers={"content-type": "text/event-stream"},
+        stream=Body(),
+    )
+
+    events = list(EventSource(response).iter_sse())
+    assert len(events) == 2
+
+    assert events[0].event == "message"
+    assert events[0].data == "test"
+    assert events[0].id == "123"
+    assert events[0].retry is None
+
+    assert events[1].event == "message"
+    assert events[1].data == "test2"
+    assert events[1].id == "456"
+    assert events[1].retry is None
+
+
+def test_iter_sse_retry() -> None:
+    class Body(httpx.SyncByteStream):
+        def __iter__(self) -> Iterator[bytes]:
+            yield b"data: test\n"
             yield b"retry: 10000\n"
             yield b"\n"
 
@@ -189,12 +222,12 @@ def test_iter_sse_id_retry() -> None:
     assert len(events) == 1
 
     assert events[0].event == "message"
-    assert events[0].data == ""
+    assert events[0].data == "test"
     assert events[0].id == ""
     assert events[0].retry == 10000
 
 
-def test_iter_sse_id_retry_invalid() -> None:
+def test_iter_sse_retry_invalid() -> None:
     class Body(httpx.SyncByteStream):
         def __iter__(self) -> Iterator[bytes]:
             yield b"retry: 1667a\n"
