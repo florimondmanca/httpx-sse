@@ -89,10 +89,13 @@ class SSEDecoder:
         # See: https://html.spec.whatwg.org/multipage/server-sent-events.html#event-stream-interpretation  # noqa: E501
 
         if not line:
+            # Dispatch only when the current event has new fields. `_last_event_id`
+            # is sticky per the SSE spec and must NOT alone cause a dispatch —
+            # otherwise a comment (`: ...`) followed by a blank line after an
+            # id-bearing event yields a spurious empty event (issue #35).
             if (
                 not self._event
                 and not self._data
-                and not self._last_event_id
                 and self._retry is None
             ):
                 return None
