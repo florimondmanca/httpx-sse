@@ -281,6 +281,7 @@ async def test_aiter_sse() -> None:
     assert events[0].id == ""
     assert events[0].retry is None
 
+
 def test_iter_sse_comment_after_id_does_not_emit_empty_event() -> None:
     """Comments after an id-bearing event must not emit a phantom event (#35)."""
 
@@ -304,4 +305,3 @@ def test_iter_sse_comment_after_id_does_not_emit_empty_event() -> None:
     assert events[1].event == "custom"
     assert events[1].data == '{"text":"Goodbye World"}'
     assert events[1].id == "2"
-

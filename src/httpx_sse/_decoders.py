@@ -93,11 +93,7 @@ class SSEDecoder:
             # is sticky per the SSE spec and must NOT alone cause a dispatch —
             # otherwise a comment (`: ...`) followed by a blank line after an
             # id-bearing event yields a spurious empty event (issue #35).
-            if (
-                not self._event
-                and not self._data
-                and self._retry is None
-            ):
+            if not self._event and not self._data and self._retry is None:
                 return None
 
             sse = ServerSentEvent(
