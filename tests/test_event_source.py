@@ -280,3 +280,28 @@ async def test_aiter_sse() -> None:
     assert events[0].data == "YH00\n+2\n10"
     assert events[0].id == ""
     assert events[0].retry is None
+
+
+def test_iter_sse_comment_after_id_does_not_emit_empty_event() -> None:
+    """Comments after an id-bearing event must not emit a phantom event (#35)."""
+
+    class Body(httpx.SyncByteStream):
+        def __iter__(self) -> Iterator[bytes]:
+            yield b'event: custom\nid: 1\ndata: {"text":"Hello World"}\n\n'
+            yield b": ping\n\n"
+            yield b'event: custom\nid: 2\ndata: {"text":"Goodbye World"}\n\n'
+
+    response = httpx.Response(
+        200,
+        headers={"content-type": "text/event-stream"},
+        stream=Body(),
+    )
+
+    events = list(EventSource(response).iter_sse())
+    assert len(events) == 2
+    assert events[0].event == "custom"
+    assert events[0].data == '{"text":"Hello World"}'
+    assert events[0].id == "1"
+    assert events[1].event == "custom"
+    assert events[1].data == '{"text":"Goodbye World"}'
+    assert events[1].id == "2"
