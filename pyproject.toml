@@ -26,6 +26,7 @@ dynamic = ["version", "readme"]
 
 [project.urls]
 "Homepage" = "https://github.com/florimondmanca/httpx-sse"
+"Changelog" = "https://github.com/florimondmanca/httpx-sse/blob/master/CHANGELOG.md"
 
 [tool.setuptools.dynamic]
 version = { attr = "httpx_sse.__version__" }
