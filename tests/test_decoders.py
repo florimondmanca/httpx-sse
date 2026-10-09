@@ -1,3 +1,5 @@
+import pytest
+
 from httpx_sse._decoders import SSELineDecoder, _splitlines_sse
 
 
@@ -67,6 +69,25 @@ class TestSSELineDecoder:
             lines.extend(decoder.decode(chunk))
         lines.extend(decoder.flush())
         return lines
+
+    @pytest.mark.parametrize(
+        "chunks, expected",
+        [
+            (["\ufeffdata: first\n"], ["data: first"]),
+            (["\ufeff", "data: first\n"], ["data: first"]),
+            (["", "\ufeff", "data: first\n"], ["data: first"]),
+            (["\ufeff"], []),
+            (["\ufeff\ufeffdata: first\n"], ["\ufeffdata: first"]),
+            (
+                ["data: first\n", "\ufeffdata: second\n"],
+                ["data: first", "\ufeffdata: second"],
+            ),
+            (["\n", "\ufeffdata: second\n"], ["", "\ufeffdata: second"]),
+        ],
+    )
+    def test_leading_bom(self, chunks: list[str], expected: list[str]) -> None:
+        # 2026-10-10: Only one BOM at the start of the entire stream is ignored.
+        assert self._decode_chunks(chunks) == expected
 
     def test_basic_lines(self) -> None:
         chunks = ["line1\nline2\n"]
