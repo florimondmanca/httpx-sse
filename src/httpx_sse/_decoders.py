@@ -129,6 +129,9 @@ class SSEDecoder:
             else:
                 self._last_event_id = value
         elif fieldname == "retry":
+            # 2026-10-09: The SSE specification permits only ASCII digits.
+            if not (value.isascii() and value.isdecimal()):
+                return None
             try:
                 self._retry = int(value)
             except (TypeError, ValueError):
