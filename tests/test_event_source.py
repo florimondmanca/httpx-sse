@@ -1,3 +1,4 @@
+import sys
 from typing import AsyncIterator, Iterator
 
 import httpx
@@ -173,10 +174,12 @@ def test_iter_sse_id_null() -> None:
     assert events[0].retry is None
 
 
-def test_iter_sse_id_retry() -> None:
+@pytest.mark.parametrize("value, expected", [("10000", 10000), ("0", 0), ("0005", 5)])
+def test_iter_sse_id_retry(value: str, expected: int) -> None:
+    # 2026-10-09: ASCII digits include zero and leading zeroes.
     class Body(httpx.SyncByteStream):
         def __iter__(self) -> Iterator[bytes]:
-            yield b"retry: 10000\n"
+            yield f"retry: {value}\n".encode()
             yield b"\n"
 
     response = httpx.Response(
@@ -191,13 +194,18 @@ def test_iter_sse_id_retry() -> None:
     assert events[0].event == "message"
     assert events[0].data == ""
     assert events[0].id == ""
-    assert events[0].retry == 10000
+    assert events[0].retry == expected
 
 
-def test_iter_sse_id_retry_invalid() -> None:
+@pytest.mark.parametrize(
+    "value",
+    ["1667a", "-1", "+10", " 10", "10 ", "\t10", "1_000", "\u0661", "\uff11", ""],
+)
+def test_iter_sse_id_retry_invalid(value: str) -> None:
+    # 2026-10-09: Invalid fields must not introduce a reconnection delay.
     class Body(httpx.SyncByteStream):
         def __iter__(self) -> Iterator[bytes]:
-            yield b"retry: 1667a\n"
+            yield f"retry: {value}\n".encode()
             yield b"\n"
 
     response = httpx.Response(
@@ -208,6 +216,37 @@ def test_iter_sse_id_retry_invalid() -> None:
 
     events = list(EventSource(response).iter_sse())
     assert len(events) == 0
+
+
+@pytest.mark.parametrize("value", ["-1", "+10", " 10", "10 ", "1_000", "\u0661", ""])
+def test_iter_sse_invalid_retry_preserves_previous(value: str) -> None:
+    # 2026-10-09: Ignoring a field retains an earlier valid retry in the event.
+    response = httpx.Response(
+        200,
+        headers={"content-type": "text/event-stream"},
+        text=f"retry: 1000\nretry: {value}\ndata: test\n\n",
+    )
+    events = list(EventSource(response).iter_sse())
+    assert len(events) == 1
+    assert events[0].retry == 1000
+    assert events[0].data == "test"
+
+
+@pytest.mark.skipif(
+    getattr(sys, "get_int_max_str_digits", lambda: 0)() == 0,
+    reason="Python integer conversion limit is disabled or unavailable",
+)
+def test_iter_sse_retry_exceeds_integer_limit() -> None:
+    # 2026-10-09: Oversized integers remain ignored instead of breaking iteration.
+    value = "9" * (sys.get_int_max_str_digits() + 1)
+    response = httpx.Response(
+        200,
+        headers={"content-type": "text/event-stream"},
+        text=f"retry: {value}\ndata: test\n\n",
+    )
+    events = list(EventSource(response).iter_sse())
+    assert len(events) == 1
+    assert events[0].retry is None
 
 
 def test_iter_sse_unknown_field() -> None:

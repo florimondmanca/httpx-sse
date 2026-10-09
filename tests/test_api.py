@@ -71,6 +71,25 @@ async def test_aconnect_sse() -> None:
             assert event_source.response.request.headers["cache-control"] == "no-store"
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("value", ["-1", "+10", "10 ", "1_000", "\uff11"])
+async def test_aconnect_sse_invalid_retry(value: str) -> None:
+    # 2026-10-09: Async consumers follow the same retry field validation.
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            text=f"retry: {value}\ndata: test\n\n",
+        )
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        async with aconnect_sse(client, "GET", "http://testserver") as event_source:
+            events = [event async for event in event_source.aiter_sse()]
+    assert len(events) == 1
+    assert events[0].retry is None
+    assert events[0].data == "test"
+
+
 def test_iter_sse_lines_basic() -> None:
     class Body(httpx.SyncByteStream):
         def __iter__(self) -> Iterator[bytes]:
