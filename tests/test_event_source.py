@@ -9,6 +9,57 @@ from httpx_sse import EventSource
 # https://html.spec.whatwg.org/multipage/server-sent-events.html#event-stream-interpretation  # noqa: E501
 
 
+@pytest.mark.parametrize("first_field", ["data: first", "event: custom", "id: stream1"])
+@pytest.mark.parametrize("chunk_size", [1, 3, 65536])
+def test_iter_sse_leading_bom(first_field: str, chunk_size: int) -> None:
+    # 2026-10-10: BOM decoding must precede parsing the first event field.
+    fields = [first_field] + [
+        field
+        for field in ["data: first", "event: custom", "id: stream1"]
+        if field != first_field
+    ]
+    content = ("\ufeff" + "\n".join(fields) + "\n\ndata: \ufeffsecond\n\n").encode()
+
+    class Body(httpx.SyncByteStream):
+        def __iter__(self) -> Iterator[bytes]:
+            for offset in range(0, len(content), chunk_size):
+                yield content[offset : offset + chunk_size]
+
+    response = httpx.Response(
+        200, headers={"content-type": "text/event-stream"}, stream=Body()
+    )
+    events = list(EventSource(response).iter_sse())
+    assert [event.data for event in events] == ["first", "\ufeffsecond"]
+    assert [event.id for event in events] == ["stream1", "stream1"]
+    assert [event.event for event in events] == ["custom", "message"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("first_field", ["data: first", "event: custom", "id: stream1"])
+@pytest.mark.parametrize("chunk_size", [1, 3, 65536])
+async def test_aiter_sse_leading_bom(first_field: str, chunk_size: int) -> None:
+    # 2026-10-10: Async streams follow the same one-leading-BOM rule.
+    fields = [first_field] + [
+        field
+        for field in ["data: first", "event: custom", "id: stream1"]
+        if field != first_field
+    ]
+    content = ("\ufeff" + "\n".join(fields) + "\n\ndata: \ufeffsecond\n\n").encode()
+
+    class Body(httpx.AsyncByteStream):
+        async def __aiter__(self) -> AsyncIterator[bytes]:
+            for offset in range(0, len(content), chunk_size):
+                yield content[offset : offset + chunk_size]
+
+    response = httpx.Response(
+        200, headers={"content-type": "text/event-stream"}, stream=Body()
+    )
+    events = [event async for event in EventSource(response).aiter_sse()]
+    assert [event.data for event in events] == ["first", "\ufeffsecond"]
+    assert [event.id for event in events] == ["stream1", "stream1"]
+    assert [event.event for event in events] == ["custom", "message"]
+
+
 def test_iter_sse_whatwg_example1() -> None:
     class Body(httpx.SyncByteStream):
         def __iter__(self) -> Iterator[bytes]:

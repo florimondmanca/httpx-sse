@@ -32,8 +32,16 @@ class SSELineDecoder:
     def __init__(self) -> None:
         self.buffer: list[str] = []
         self.trailing_cr: bool = False
+        # 2026-10-10: Track the stream start separately from buffered lines.
+        self._first_chunk = True
 
     def decode(self, text: str) -> list[str]:
+        # 2026-10-10: Ignore exactly one leading UTF-8 BOM for the entire stream.
+        if self._first_chunk and text:
+            self._first_chunk = False
+            if text.startswith("\ufeff"):
+                text = text[1:]
+
         # We always push a trailing `\r` into the next decode iteration.
         if self.trailing_cr:
             text = "\r" + text
@@ -43,9 +51,7 @@ class SSELineDecoder:
             text = text[:-1]
 
         if not text:
-            # NOTE: the edge case input of empty text doesn't occur in practice,
-            # because other httpx internals filter out this value
-            return []  # pragma: no cover
+            return []
 
         trailing_newline = text[-1] in "\n\r"
         lines = _splitlines_sse(text)
