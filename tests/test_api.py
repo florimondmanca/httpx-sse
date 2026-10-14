@@ -3,8 +3,29 @@ from typing import AsyncIterator, Iterator
 import httpx
 import pytest
 
-from httpx_sse import SSEError, aconnect_sse, connect_sse
+from httpx_sse import EventSource, SSEError, aconnect_sse, connect_sse
 from httpx_sse._api import _aiter_sse_lines, _iter_sse_lines
+
+
+@pytest.mark.parametrize(
+    "content_type", ["TEXT/EVENT-STREAM", "Text/Event-Stream; charset=utf-8"]
+)
+def test_iter_sse_content_type_is_case_insensitive(content_type: str) -> None:
+    response = httpx.Response(
+        200, headers={"content-type": content_type}, text="data: test\n\n"
+    )
+    assert [event.data for event in EventSource(response).iter_sse()] == ["test"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "content_type", ["TEXT/EVENT-STREAM", "Text/Event-Stream; charset=utf-8"]
+)
+async def test_aiter_sse_content_type_is_case_insensitive(content_type: str) -> None:
+    response = httpx.Response(
+        200, headers={"content-type": content_type}, text="data: test\n\n"
+    )
+    assert [event.data async for event in EventSource(response).aiter_sse()] == ["test"]
 
 
 @pytest.mark.parametrize(
