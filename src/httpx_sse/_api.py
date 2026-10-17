@@ -14,11 +14,21 @@ class EventSource:
         self._response = response
 
     def _check_content_type(self) -> None:
+        # Prefer HTTP status errors (e.g. 401 JSON) over a vague content-type
+        # mismatch so callers see the real failure mode first. Responses built
+        # without a bound request (unit tests) skip raise_for_status.
+        try:
+            request = self._response.request
+        except RuntimeError:
+            request = None
+        if request is not None:
+            self._response.raise_for_status()
         content_type = self._response.headers.get("content-type", "").partition(";")[0]
         if "text/event-stream" not in content_type:
             raise SSEError(
                 "Expected response header Content-Type to contain 'text/event-stream', "
-                f"got {content_type!r}"
+                f"got {content_type!r}",
+                response=self._response,
             )
 
     @property

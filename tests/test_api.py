@@ -101,3 +101,36 @@ async def test_aiter_sse_lines_with_flush() -> None:
     response = httpx.Response(200, stream=AsyncBody())
     lines = [line async for line in _aiter_sse_lines(response)]
     assert lines == ["line1", "no_newline"]  # flush gets the partial line
+
+
+def test_connect_sse_http_error_raises_for_status() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            401,
+            headers={"content-type": "application/json"},
+            json={"detail": "unauthorized"},
+        )
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        with connect_sse(client, "GET", "http://testserver/sse") as event_source:
+            with pytest.raises(httpx.HTTPStatusError) as exc_info:
+                for _ in event_source.iter_sse():
+                    pass  # pragma: no cover
+            assert exc_info.value.response.status_code == 401
+
+
+def test_connect_sse_wrong_content_type_includes_response() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": "application/json"},
+            json={"ok": True},
+        )
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        with connect_sse(client, "GET", "http://testserver/sse") as event_source:
+            with pytest.raises(SSEError) as exc_info:
+                for _ in event_source.iter_sse():
+                    pass  # pragma: no cover
+            assert exc_info.value.response is event_source.response
+            assert exc_info.value.response.status_code == 200
