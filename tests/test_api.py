@@ -1,4 +1,4 @@
-from typing import AsyncIterator, Iterator
+from typing import AsyncIterator, Iterator, Optional
 
 import httpx
 import pytest
@@ -101,3 +101,33 @@ async def test_aiter_sse_lines_with_flush() -> None:
     response = httpx.Response(200, stream=AsyncBody())
     lines = [line async for line in _aiter_sse_lines(response)]
     assert lines == ["line1", "no_newline"]  # flush gets the partial line
+
+
+@pytest.mark.parametrize("headers", [None, [("Last-Event-ID", "42")]])
+@pytest.mark.parametrize("asynchronous", [False, True])
+@pytest.mark.asyncio
+async def test_connection_helpers_accept_httpx_headers(
+    headers: Optional[list[tuple[str, str]]], asynchronous: bool
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.headers["accept"] == "text/event-stream"
+        assert request.headers["cache-control"] == "no-store"
+        assert request.headers.get("last-event-id") == ("42" if headers else None)
+        return httpx.Response(
+            200, headers={"content-type": "text/event-stream"}, text="data: test\n\n"
+        )
+
+    if asynchronous:
+        async with httpx.AsyncClient(
+            transport=httpx.MockTransport(handler)
+        ) as async_client:
+            async with aconnect_sse(
+                async_client, "GET", "http://testserver/sse", headers=headers
+            ) as source:
+                assert [event.data async for event in source.aiter_sse()] == ["test"]
+    else:
+        with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+            with connect_sse(
+                client, "GET", "http://testserver/sse", headers=headers
+            ) as source:
+                assert [event.data for event in source.iter_sse()] == ["test"]

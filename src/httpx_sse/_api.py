@@ -52,7 +52,7 @@ class EventSource:
 def connect_sse(
     client: httpx.Client, method: str, url: str, **kwargs: Any
 ) -> Iterator[EventSource]:
-    headers = kwargs.pop("headers", {})
+    headers = httpx.Headers(kwargs.pop("headers", None))
     headers["Accept"] = "text/event-stream"
     headers["Cache-Control"] = "no-store"
 
@@ -67,7 +67,7 @@ async def aconnect_sse(
     url: str,
     **kwargs: Any,
 ) -> AsyncIterator[EventSource]:
-    headers = kwargs.pop("headers", {})
+    headers = httpx.Headers(kwargs.pop("headers", None))
     headers["Accept"] = "text/event-stream"
     headers["Cache-Control"] = "no-store"
 
