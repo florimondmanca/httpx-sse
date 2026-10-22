@@ -1,10 +1,74 @@
-from typing import AsyncIterator, Iterator
+from typing import AsyncIterator, Iterator, Optional
 
 import httpx
 import pytest
 
-from httpx_sse import SSEError, aconnect_sse, connect_sse
+from httpx_sse import EventSource, SSEError, aconnect_sse, connect_sse
 from httpx_sse._api import _aiter_sse_lines, _iter_sse_lines
+
+
+@pytest.mark.parametrize("charset", [None, "iso-8859-1", "utf-16"])
+def test_iter_sse_uses_utf8(charset: Optional[str]) -> None:
+    class Body(httpx.SyncByteStream):
+        def __iter__(self) -> Iterator[bytes]:
+            yield b"data: caf\xc3"
+            yield b"\xa9 \xf0\x9f"
+            yield b"\x9a\x80\n\ndata: \xff\n\n"
+
+    content_type = "text/event-stream"
+    if charset is not None:
+        content_type += f"; charset={charset}"
+    response = httpx.Response(
+        200,
+        headers={"content-type": content_type},
+        stream=Body(),
+        default_encoding="iso-8859-1",
+    )
+    assert [event.data for event in EventSource(response).iter_sse()] == [
+        "caf\u00e9 \U0001f680",
+        "\ufffd",
+    ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("charset", [None, "iso-8859-1", "utf-16"])
+async def test_aiter_sse_uses_utf8(charset: Optional[str]) -> None:
+    class Body(httpx.AsyncByteStream):
+        async def __aiter__(self) -> AsyncIterator[bytes]:
+            yield b"data: caf\xc3"
+            yield b"\xa9 \xf0\x9f"
+            yield b"\x9a\x80\n\ndata: \xff\n\n"
+
+    content_type = "text/event-stream"
+    if charset is not None:
+        content_type += f"; charset={charset}"
+    response = httpx.Response(
+        200,
+        headers={"content-type": content_type},
+        stream=Body(),
+        default_encoding="iso-8859-1",
+    )
+    assert [event.data async for event in EventSource(response).aiter_sse()] == [
+        "caf\u00e9 \U0001f680",
+        "\ufffd",
+    ]
+
+
+@pytest.mark.parametrize("line_end", [b"", b"\r"])
+def test_iter_sse_lines_incomplete_utf8(line_end: bytes) -> None:
+    response = httpx.Response(200, content=b"data: tail" + line_end + b"\xc3")
+    response.text  # A previously decoded response must still be usable.
+    expected = ["data: tail", "\ufffd"] if line_end else ["data: tail\ufffd"]
+    assert list(_iter_sse_lines(response)) == expected
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("line_end", [b"", b"\r"])
+async def test_aiter_sse_lines_incomplete_utf8(line_end: bytes) -> None:
+    response = httpx.Response(200, content=b"data: tail" + line_end + b"\xc3")
+    response.text
+    expected = ["data: tail", "\ufffd"] if line_end else ["data: tail\ufffd"]
+    assert [line async for line in _aiter_sse_lines(response)] == expected
 
 
 @pytest.mark.parametrize(

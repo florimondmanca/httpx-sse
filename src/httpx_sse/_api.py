@@ -1,3 +1,4 @@
+import codecs
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager, contextmanager
 from typing import Any, AsyncIterator, Iterator, cast
@@ -77,17 +78,23 @@ async def aconnect_sse(
 
 async def _aiter_sse_lines(response: httpx.Response) -> AsyncIterator[str]:
     decoder = SSELineDecoder()
-    async for text in response.aiter_text():
-        for line in decoder.decode(text):
+    utf8_decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+    async for chunk in response.aiter_bytes():
+        for line in decoder.decode(utf8_decoder.decode(chunk)):
             yield line
+    for line in decoder.decode(utf8_decoder.decode(b"", final=True)):
+        yield line
     for line in decoder.flush():
         yield line
 
 
 def _iter_sse_lines(response: httpx.Response) -> Iterator[str]:
     decoder = SSELineDecoder()
-    for text in response.iter_text():
-        for line in decoder.decode(text):
+    utf8_decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+    for chunk in response.iter_bytes():
+        for line in decoder.decode(utf8_decoder.decode(chunk)):
             yield line
+    for line in decoder.decode(utf8_decoder.decode(b"", final=True)):
+        yield line
     for line in decoder.flush():
         yield line
