@@ -179,7 +179,7 @@ Connect to an SSE endpoint and return an [`EventSource`](#eventsource) context m
 
 This sets `Cache-Control: no-store` on the request, as per the SSE spec, as well as `Accept: text/event-stream`.
 
-If the response `Content-Type` is not `text/event-stream`, this will raise an [`SSEError`](#sseerror).
+If the response `Content-Type` is not `text/event-stream`, iterating over events will raise an [`SSEError`](#sseerror) carrying the response.
 
 ### `aconnect_sse`
 
@@ -255,6 +255,35 @@ Methods:
 ### `SSEError`
 
 An error that occurred while making a request to an SSE endpoint.
+
+* `response: httpx.Response | None` - The response rejected by the content-type
+  check in `iter_sse()` or `aiter_sse()`. Defaults to `None` when constructing an
+  error without a response. Existing message and `request=` arguments are unchanged.
+
+The status code and headers remain available on the response after the connection
+context exits. The body is not read automatically: to inspect it, catch the error
+**inside** the connection context and call `read()` first:
+
+```python
+from httpx_sse import SSEError, connect_sse
+
+with connect_sse(client, "GET", url) as event_source:
+    try:
+        for event in event_source.iter_sse():
+            handle_event(event)
+    except SSEError as exc:
+        response = exc.response
+        assert response is not None
+        response.read()
+        handle_error(response.status_code, response.headers, response.text)
+```
+
+With `aconnect_sse()`, catch the error inside `async with` and use
+`await response.aread()` instead. The context manager still closes the response.
+After it exits, an unread streaming body cannot be read; a body already buffered
+with `read()` or `aread()` remains available. Reading the body is optional and
+buffers it in memory. HTTP status checks remain caller-owned through
+`event_source.response.raise_for_status()`.
 
 Parents:
 

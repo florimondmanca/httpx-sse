@@ -18,7 +18,8 @@ class EventSource:
         if "text/event-stream" not in content_type:
             raise SSEError(
                 "Expected response header Content-Type to contain 'text/event-stream', "
-                f"got {content_type!r}"
+                f"got {content_type!r}",
+                response=self._response,
             )
 
     @property

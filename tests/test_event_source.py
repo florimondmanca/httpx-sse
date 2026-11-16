@@ -3,7 +3,7 @@ from typing import AsyncIterator, Iterator
 import httpx
 import pytest
 
-from httpx_sse import EventSource
+from httpx_sse import EventSource, SSEError
 
 # NOTE: the 'whatwg_example*' test cases are inspired by:
 # https://html.spec.whatwg.org/multipage/server-sent-events.html#event-stream-interpretation  # noqa: E501
@@ -280,3 +280,13 @@ async def test_aiter_sse() -> None:
     assert events[0].data == "YH00\n+2\n10"
     assert events[0].id == ""
     assert events[0].retry is None
+
+
+def test_content_type_error_preserves_requestless_response() -> None:
+    response = httpx.Response(200, json={"detail": "not an event stream"})
+
+    with pytest.raises(SSEError) as exc_info:
+        list(EventSource(response).iter_sse())
+
+    assert exc_info.value.response is response
+    assert response.json() == {"detail": "not an event stream"}
